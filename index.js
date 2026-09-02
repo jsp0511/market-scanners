@@ -1,8 +1,10 @@
 ﻿import fs from 'fs';
 import path from 'path';
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 import { runTI65Scan } from './scanners/ti65.js';
 
+// v4 requires initializing the class
+const yahooFinance = new YahooFinance();
 const TICKERS = JSON.parse(fs.readFileSync(path.join('data', 'tickers.json'), 'utf-8'));
 
 async function main() {

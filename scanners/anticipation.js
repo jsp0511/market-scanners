@@ -1,7 +1,7 @@
 ﻿import { calculateSMA } from '../indicators/math.js';
 
 export function runScanners(symbol, history) {
-  if (!history || history.length < 5) return { standard: null, ipo: null, trendIntensity: null };
+  if (!history || history.length < 65) return { standard: null, ipo: null, trendIntensity: null };
 
   const latest = history[history.length - 1];
   const previous = history[history.length - 2];
@@ -38,7 +38,7 @@ export function runScanners(symbol, history) {
     const sma65 = calculateSMA(history, 65);
     const tiRatio = (sma7 && sma65) ? (sma7 / sma65) : 0;
 
-    // Pure Trend Intensity condition (avgc7/avgc65 >= 1.05 based on March 2018 notes)
+    // Pure Trend Intensity condition (avgc7/avgc65 >= 1.05)
     if (tiRatio >= 1.05) {
       trendIntensity = symbol;
     }

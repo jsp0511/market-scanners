@@ -5,40 +5,37 @@ import { runScanners } from './scanners/anticipation.js';
 const yahooFinance = new YahooFinance();
 
 async function getStockList() {
-  return [
-    'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'NFLX', 'AMD', 'PLTR',
-    'AVGO', 'COST', 'PEP', 'ADBE', 'LIN', 'TMO', 'CSCO', 'ACN', 'ABT', 'DHR',
-    'VZ', 'DIS', 'CMCSA', 'INTC', 'OKE', 'PYPL', 'KB', 'TEVA', 
-    'QSR', 'AMCR', 'SOLV', 'MKC', 'PAG', 'SJM', 'CSGP', 'CAG', 'PPC', 'KVYO', 
-    'SXT', 'OTF', 'MRP', 'GEF', 'CON', 'PARR', 'AMLX', 'AWR', 'SBLK', 'NMIH', 
-    'CWK', 'PK', 'SLS', 'URGN', 'STOK', 'ASST', 'WEN', 'SIBN', 'GRNT', 'STLN', 
-    'QUAD', 'ACB', 'STRC', 'KXIAY', 'PAYP', 'XE', 'LMRI', 'BIII', 'HSBC', 'MUFG',
-    'T', 'PFE', 'BMY', 'ING', 'ET', 'NWG', 'WBD', 'NU', 'AJG', 'ALL', 'HLN', 'BSBR',
-    'HMC', 'VOD', 'ALC', 'NMR', 'FTI', 'VRSN', 'BNTX', 'INSM', 'ROIV', 'BRO', 'CIB',
-    'GIS', 'THC', 'LYB', 'GMAB', 'MDLN', 'ANDG', 'IOND', 'LFTO', 'LIME', 'AERO', 
-    'LBRX', 'APC', 'AKTS', 'SPTX', 'ODTX', 'NHP', 'FSSL', 'REF', 'RVI', 'OFRM', 
-    'HMH', 'PSUS', 'SATA'
-  ];
+  console.log("Fetching full market symbol directory...");
+  const response = await fetch('https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.txt');
+  const text = await response.text();
+  const symbols = text.split('\n')
+    .map(s => s.trim().toUpperCase())
+    .filter(s => s && /^[A-Z]+$/.test(s));
+  
+  console.log(`Loaded ${symbols.length} symbols from full market exchange directory.`);
+  return symbols;
 }
 
 async function run() {
-  console.log("Starting Market Scanners...");
+  console.log("Starting Full Market Scanners...");
   const symbols = await getStockList();
-  console.log(`Evaluating ${symbols.length} symbols...`);
   
   const standardSet = new Set();
   const ipoSet = new Set();
   const trendIntensitySet = new Set();
+  let processedCount = 0;
 
   for (const symbol of symbols) {
     try {
+      processedCount++;
+      if (processedCount % 250 === 0) {
+        console.log(`Progress: Evaluated ${processedCount}/${symbols.length} symbols...`);
+      }
+
       const queryOptions = { period1: '2024-01-01', interval: '1d' };
       const result = await yahooFinance.chart(symbol, queryOptions);
       
-      if (!result || !result.quotes || result.quotes.length === 0) {
-        console.log(`[Skip] No data for ${symbol}`);
-        continue;
-      }
+      if (!result || !result.quotes || result.quotes.length === 0) continue;
       
       const history = result.quotes.map(q => ({
         date: q.date,
@@ -50,24 +47,16 @@ async function run() {
       }));
 
       const scanResult = runScanners(symbol, history);
-      if (scanResult.standard) {
-        console.log(`[Match: Standard] ${symbol}`);
-        standardSet.add(scanResult.standard);
-      }
-      if (scanResult.ipo) {
-        console.log(`[Match: IPO] ${symbol}`);
-        ipoSet.add(scanResult.ipo);
-      }
-      if (scanResult.trendIntensity) {
-        console.log(`[Match: Trend Intensity] ${symbol}`);
-        trendIntensitySet.add(scanResult.trendIntensity);
-      }
+      if (scanResult.standard) standardSet.add(scanResult.standard);
+      if (scanResult.ipo) ipoSet.add(scanResult.ipo);
+      if (scanResult.trendIntensity) trendIntensitySet.add(scanResult.trendIntensity);
 
     } catch (err) {
-      console.log(`[Error] Failed processing ${symbol}: ${err.message}`);
+      // Suppress individual ticker network/rate-limit fetch errors to keep runner clean
     }
   }
 
+  // Deduplication Priority: Standard Anticipation takes precedence over Trend Intensity
   for (const symbol of standardSet) {
     trendIntensitySet.delete(symbol);
   }
@@ -77,24 +66,24 @@ async function run() {
   const trendIntensityList = [...trendIntensitySet].sort();
 
   console.log("Scan complete.");
-  console.log(`Standard Anticipation: ${standardList.join(', ')}`);
-  console.log(`IPO Anticipation: ${ipoList.join(', ')}`);
-  console.log(`Trend Intensity: ${trendIntensityList.join(', ')}`);
+  console.log(`Standard Anticipation matches: ${standardList.length}`);
+  console.log(`IPO Anticipation matches: ${ipoList.length}`);
+  console.log(`Trend Intensity matches: ${trendIntensityList.length}`);
 
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (summaryFile) {
     const markdownOutput = `
-### Standard Anticipation Setups
+### Standard Anticipation Setups (${standardList.length})
 \`\`\`text
 ${standardList.join(', ')}
 \`\`\`
 
-### IPO Anticipation Setups
+### IPO Anticipation Setups (${ipoList.length})
 \`\`\`text
 ${ipoList.join(', ')}
 \`\`\`
 
-### Trend Intensity Setups
+### Trend Intensity Setups (${trendIntensityList.length})
 \`\`\`text
 ${trendIntensityList.join(', ')}
 \`\`\`

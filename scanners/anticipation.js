@@ -34,16 +34,17 @@ export function runScanners(symbol, history) {
       ipo = symbol;
     }
   } else {
-    // Standard checks require at least 65 days for SMA65
     if (history.length >= 65) {
       const sma7 = calculateSMA(history, 7);
       const sma65 = calculateSMA(history, 65);
       const tiRatio = (sma7 && sma65) ? (sma7 / sma65) : 0;
 
+      // Pure Trend Intensity condition
       if (tiRatio >= 1.05) {
         trendIntensity = symbol;
       }
 
+      // Standard Anticipation conditions
       if (
         tiRatio > 1.04 &&
         netChange >= -0.40 && netChange <= 0.40 &&

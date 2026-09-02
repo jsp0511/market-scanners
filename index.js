@@ -1,6 +1,8 @@
 ﻿import fs from 'fs';
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 import { runScanners } from './scanners/anticipation.js';
+
+const yahooFinance = new YahooFinance();
 
 async function getStockList() {
   return [

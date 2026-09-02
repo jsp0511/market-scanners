@@ -9,8 +9,9 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 async function main() {
   console.log('Fetching active US Common Stocks & ADRs from the SEC...');
   
+  // SEC requires a strict User-Agent format: Name email@domain.com
   const secResponse = await fetch('https://www.sec.gov/files/company_tickers.json', {
-    headers: { 'User-Agent': 'Jerry Spallone - LoamLabs LLC' }
+    headers: { 'User-Agent': 'Jerry Spallone jsp0511@gmail.com' }
   });
   const secData = await secResponse.json();
 
@@ -23,7 +24,7 @@ async function main() {
   const ipoResults = [];
   
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 380); // Pull ~1.5 calendar years to guarantee 252 trading days for IPO sorting
+  startDate.setDate(startDate.getDate() - 380); 
   const period1 = startDate.toISOString().split('T')[0];
 
   for (let i = 0; i < cleanTickers.length; i++) {

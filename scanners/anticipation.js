@@ -1,7 +1,7 @@
 ﻿import { calculateSMA } from '../indicators/math.js';
 
 export function runScanners(symbol, history) {
-  if (!history || history.length < 65) return { standard: null, ipo: null, trendIntensity: null };
+  if (!history || history.length < 5) return { standard: null, ipo: null, trendIntensity: null };
 
   const latest = history[history.length - 1];
   const previous = history[history.length - 2];
@@ -34,22 +34,23 @@ export function runScanners(symbol, history) {
       ipo = symbol;
     }
   } else {
-    const sma7 = calculateSMA(history, 7);
-    const sma65 = calculateSMA(history, 65);
-    const tiRatio = (sma7 && sma65) ? (sma7 / sma65) : 0;
+    // Standard checks require at least 65 days for SMA65
+    if (history.length >= 65) {
+      const sma7 = calculateSMA(history, 7);
+      const sma65 = calculateSMA(history, 65);
+      const tiRatio = (sma7 && sma65) ? (sma7 / sma65) : 0;
 
-    // Pure Trend Intensity condition (avgc7/avgc65 >= 1.05)
-    if (tiRatio >= 1.05) {
-      trendIntensity = symbol;
-    }
+      if (tiRatio >= 1.05) {
+        trendIntensity = symbol;
+      }
 
-    // Standard Anticipation conditions (tiRatio > 1.04 plus tight daily range)
-    if (
-      tiRatio > 1.04 &&
-      netChange >= -0.40 && netChange <= 0.40 &&
-      percentChange >= -1.0 && percentChange <= 1.0
-    ) {
-      standard = symbol;
+      if (
+        tiRatio > 1.04 &&
+        netChange >= -0.40 && netChange <= 0.40 &&
+        percentChange >= -1.0 && percentChange <= 1.0
+      ) {
+        standard = symbol;
+      }
     }
   }
 

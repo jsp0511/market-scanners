@@ -3,12 +3,10 @@ import yahooFinance from 'yahoo-finance2';
 import { runScanners } from './scanners/anticipation.js';
 
 async function getStockList() {
-  // Broadening the scanner to evaluate a comprehensive symbol list across major US exchanges
-  // In a production scraper, this can pull from a dynamic exchange listing or expanded array
   return [
     'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'NFLX', 'AMD', 'PLTR',
     'AVGO', 'COST', 'PEP', 'ADBE', 'LIN', 'TMO', 'CSCO', 'ACN', 'ABT', 'DHR',
-    'VZ', 'DIS', 'NFLX', 'CMCSA', 'INTC', 'VZ', 'OKE', 'PYPL', 'KB', 'TEVA', 
+    'VZ', 'DIS', 'CMCSA', 'INTC', 'OKE', 'PYPL', 'KB', 'TEVA', 
     'QSR', 'AMCR', 'SOLV', 'MKC', 'PAG', 'SJM', 'CSGP', 'CAG', 'PPC', 'KVYO', 
     'SXT', 'OTF', 'MRP', 'GEF', 'CON', 'PARR', 'AMLX', 'AWR', 'SBLK', 'NMIH', 
     'CWK', 'PK', 'SLS', 'URGN', 'STOK', 'ASST', 'WEN', 'SIBN', 'GRNT', 'STLN', 
@@ -35,7 +33,10 @@ async function run() {
       const queryOptions = { period1: '2024-01-01', interval: '1d' };
       const result = await yahooFinance.chart(symbol, queryOptions);
       
-      if (!result || !result.quotes || result.quotes.length === 0) continue;
+      if (!result || !result.quotes || result.quotes.length === 0) {
+        console.log(`[Skip] No data for ${symbol}`);
+        continue;
+      }
       
       const history = result.quotes.map(q => ({
         date: q.date,
@@ -47,16 +48,24 @@ async function run() {
       }));
 
       const scanResult = runScanners(symbol, history);
-      if (scanResult.standard) standardSet.add(scanResult.standard);
-      if (scanResult.ipo) ipoSet.add(scanResult.ipo);
-      if (scanResult.trendIntensity) trendIntensitySet.add(scanResult.trendIntensity);
+      if (scanResult.standard) {
+        console.log(`[Match: Standard] ${symbol}`);
+        standardSet.add(scanResult.standard);
+      }
+      if (scanResult.ipo) {
+        console.log(`[Match: IPO] ${symbol}`);
+        ipoSet.add(scanResult.ipo);
+      }
+      if (scanResult.trendIntensity) {
+        console.log(`[Match: Trend Intensity] ${symbol}`);
+        trendIntensitySet.add(scanResult.trendIntensity);
+      }
 
     } catch (err) {
-      // Suppress individual ticker network fetch errors
+      console.log(`[Error] Failed processing ${symbol}: ${err.message}`);
     }
   }
 
-  // Deduplication Priority: Standard Anticipation takes precedence over Trend Intensity
   for (const symbol of standardSet) {
     trendIntensitySet.delete(symbol);
   }

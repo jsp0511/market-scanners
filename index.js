@@ -24,11 +24,20 @@ async function main() {
     }
   }
 
-  const csvHeader = 'Symbol,TI65_Ratio\n';
-  const csvRows = ti65Results.map(r => `${r.symbol},${r.tiRatio}`).join('\n');
-  fs.writeFileSync(path.join('exports', 'ti65_bullish.csv'), csvHeader + csvRows);
+  const commaSeparated = ti65Results.map(r => r.symbol).join(', ');
 
-  console.log(`Scan finished. ${ti65Results.length} matches written to exports/ti65_bullish.csv`);
+  // Prints directly into the "Annotations" box on your GitHub screen
+  console.log(`::notice title=TI65 Tickers::${commaSeparated || 'No matches found'}`);
+
+  // Prints a clean copy-paste block on the GitHub Summary tab
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    fs.appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `### TI65 Bullish Tickers\n\n\`\`\`text\n${commaSeparated || 'No matches'}\n\`\`\`\n`
+    );
+  }
+
+  console.log(`\nResults: ${commaSeparated}`);
 }
 
 main();

@@ -20,6 +20,7 @@ async function run() {
   const standardSet = new Set();
   const ipoSet = new Set();
   const trendIntensitySet = new Set();
+  const youngSet = new Set();
   let processedCount = 0;
 
   let validationDropped = 0;
@@ -50,6 +51,7 @@ async function run() {
       if (scanResult.standard) standardSet.add(scanResult.standard);
       if (scanResult.ipo) ipoSet.add(scanResult.ipo);
       if (scanResult.trendIntensity) trendIntensitySet.add(scanResult.trendIntensity);
+      if (scanResult.young) youngSet.add(scanResult.young);
     } catch (err) {
       if (err.name === 'FailedYahooValidationError') {
         validationDropped++;
@@ -62,17 +64,23 @@ async function run() {
       }
     }
   }
-  // Deduplication Priority: Standard Anticipation takes precedence over Trend Intensity
+  // Deduplication Priority: Standard Anticipation > Young Trend Intensity > Trend Intensity
   for (const symbol of standardSet) {
+    youngSet.delete(symbol);
+    trendIntensitySet.delete(symbol);
+  }
+  for (const symbol of youngSet) {
     trendIntensitySet.delete(symbol);
   }
   const standardList = [...standardSet].sort();
   const ipoList = [...ipoSet].sort();
   const trendIntensityList = [...trendIntensitySet].sort();
+  const youngList = [...youngSet].sort();
   console.log("Scan complete.");
   console.log(`Standard Anticipation matches: ${standardList.length}`);
   console.log(`IPO Anticipation matches: ${ipoList.length}`);
   console.log(`Trend Intensity matches: ${trendIntensityList.length}`);
+  console.log(`Young Trend Intensity matches: ${youngList.length}`);
   console.log(`Symbols evaluated cleanly: ${symbols.length - validationDropped - httpErrors - otherErrors}/${symbols.length}`);
   console.log(`Validation-dropped: ${validationDropped}, HTTP errors: ${httpErrors}, Other errors: ${otherErrors}`);
   if (failureSamples.length) {
@@ -92,6 +100,10 @@ ${ipoList.join(', ')}
 ### Trend Intensity Setups (${trendIntensityList.length})
 \`\`\`text
 ${trendIntensityList.join(', ')}
+\`\`\`
+### Young Trend Intensity Setups (${youngList.length})
+\`\`\`text
+${youngList.join(', ')}
 \`\`\`
 ### Scan Diagnostics
 \`\`\`text

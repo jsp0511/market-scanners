@@ -3,9 +3,11 @@ import path from 'path';
 import YahooFinance from 'yahoo-finance2';
 import { runTI65Scan } from './scanners/ti65.js';
 
-// v4 requires initializing the class
 const yahooFinance = new YahooFinance();
-const TICKERS = JSON.parse(fs.readFileSync(path.join('data', 'tickers.json'), 'utf-8'));
+
+// Read the JSON file and strip the invisible Windows BOM character
+const rawJson = fs.readFileSync(path.join('data', 'tickers.json'), 'utf-8').replace(/^\uFEFF/, '');
+const TICKERS = JSON.parse(rawJson);
 
 async function main() {
   const ti65Results = [];

@@ -1,24 +1,24 @@
 ﻿name: Daily Momentum Scans
 
 on:
-  schedule:
-    - cron: '0 21 * * 1-5'
   workflow_dispatch:
+  schedule:
+    # Runs Monday through Friday at 6:00 PM Eastern Time (22:00 UTC)
+    - cron: '0 22 * * 1-5'
 
 jobs:
   run-scanners:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '20'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm install
 
       - name: Run Scanners

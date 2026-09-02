@@ -3,21 +3,28 @@ import yahooFinance from 'yahoo-finance2';
 import { runScanners } from './scanners/anticipation.js';
 
 async function getStockList() {
-  // Pulling standard test universe or dynamic list
-  // For production scale, this iterates through the market symbol pool
+  // Broadening the scanner to evaluate a comprehensive symbol list across major US exchanges
+  // In a production scraper, this can pull from a dynamic exchange listing or expanded array
   return [
     'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'NFLX', 'AMD', 'PLTR',
-    'WLY', 'TNON', 'XE', 'KXIAY', 'PAYP', 'LMRI', 'BIII', 'VZ', 'OKE', 'PYPL', 
-    'KB', 'TEVA', 'QSR', 'AMCR', 'SOLV', 'MKC', 'PAG', 'SJM', 'CSGP', 'CAG', 
-    'PPC', 'KVYO', 'SXT', 'OTF', 'MRP', 'GEF', 'CON', 'PARR', 'AMLX', 'AWR', 
-    'SBLK', 'NMIH', 'CWK', 'PK', 'SLS', 'URGN', 'STOK', 'ASST', 'WEN', 'SIBN', 
-    'GRNT', 'STLN', 'QUAD', 'ACB', 'STRC'
+    'AVGO', 'COST', 'PEP', 'ADBE', 'LIN', 'TMO', 'CSCO', 'ACN', 'ABT', 'DHR',
+    'VZ', 'DIS', 'NFLX', 'CMCSA', 'INTC', 'VZ', 'OKE', 'PYPL', 'KB', 'TEVA', 
+    'QSR', 'AMCR', 'SOLV', 'MKC', 'PAG', 'SJM', 'CSGP', 'CAG', 'PPC', 'KVYO', 
+    'SXT', 'OTF', 'MRP', 'GEF', 'CON', 'PARR', 'AMLX', 'AWR', 'SBLK', 'NMIH', 
+    'CWK', 'PK', 'SLS', 'URGN', 'STOK', 'ASST', 'WEN', 'SIBN', 'GRNT', 'STLN', 
+    'QUAD', 'ACB', 'STRC', 'KXIAY', 'PAYP', 'XE', 'LMRI', 'BIII', 'HSBC', 'MUFG',
+    'T', 'PFE', 'BMY', 'ING', 'ET', 'NWG', 'WBD', 'NU', 'AJG', 'ALL', 'HLN', 'BSBR',
+    'HMC', 'VOD', 'ALC', 'NMR', 'FTI', 'VRSN', 'BNTX', 'INSM', 'ROIV', 'BRO', 'CIB',
+    'GIS', 'THC', 'LYB', 'GMAB', 'MDLN', 'ANDG', 'IOND', 'LFTO', 'LIME', 'AERO', 
+    'LBRX', 'APC', 'AKTS', 'SPTX', 'ODTX', 'NHP', 'FSSL', 'REF', 'RVI', 'OFRM', 
+    'HMH', 'PSUS', 'SATA'
   ];
 }
 
 async function run() {
   console.log("Starting Market Scanners...");
   const symbols = await getStockList();
+  console.log(`Evaluating ${symbols.length} symbols...`);
   
   const standardSet = new Set();
   const ipoSet = new Set();
@@ -45,12 +52,11 @@ async function run() {
       if (scanResult.trendIntensity) trendIntensitySet.add(scanResult.trendIntensity);
 
     } catch (err) {
-      // Suppress individual ticker network fetch errors to keep runner clean
+      // Suppress individual ticker network fetch errors
     }
   }
 
-  // Deduplication Priority: If a ticker appears in both Standard Anticipation and Trend Intensity, 
-  // remove it from Trend Intensity so Anticipation "owns" the high-priority consolidation setup.
+  // Deduplication Priority: Standard Anticipation takes precedence over Trend Intensity
   for (const symbol of standardSet) {
     trendIntensitySet.delete(symbol);
   }
@@ -64,7 +70,6 @@ async function run() {
   console.log(`IPO Anticipation: ${ipoList.join(', ')}`);
   console.log(`Trend Intensity: ${trendIntensityList.join(', ')}`);
 
-  // Write to GitHub Actions Job Summary
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (summaryFile) {
     const markdownOutput = `

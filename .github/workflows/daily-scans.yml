@@ -2,33 +2,38 @@
 on:
   workflow_dispatch:
   schedule:
-    # 6:00 PM Eastern, covering both DST states:
-    - cron: '0 22 * * 1-5'   # 6 PM EDT (Mar-Nov) = 22:00 UTC
-    - cron: '0 23 * * 1-5'   # 6 PM EST (Nov-Mar) = 23:00 UTC
+    - cron: '7 22 * * 1-5'   # ~6 PM Eastern during EDT (Mar-Nov)
+    - cron: '7 23 * * 1-5'   # ~6 PM Eastern during EST (Nov-Mar)
 jobs:
   run-scanners:
     runs-on: ubuntu-latest
     steps:
-      - name: Only proceed if it's actually 6 PM Eastern
+      - name: Skip if today's scan already succeeded
         id: gate
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          HOUR=$(TZ="America/New_York" date +%H)
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$HOUR" != "18" ]; then
+          TODAY_UTC=$(date -u +%Y-%m-%d)
+          ALREADY_RAN=$(gh run list --workflow=daily-scans.yml --status=success --limit 10 --json createdAt \
+            --jq "[.[] | select(.createdAt | startswith(\"$TODAY_UTC\"))] | length")
+          if [ "$ALREADY_RAN" -gt 0 ]; then
+            echo "A scan already succeeded today ($ALREADY_RAN run(s)) -- skipping this trigger."
             echo "proceed=false" >> "$GITHUB_OUTPUT"
           else
             echo "proceed=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Checkout repository
-        if: steps.gate.outputs.proceed == 'true'
+        if: github.event_name != 'schedule' || steps.gate.outputs.proceed == 'true'
         uses: actions/checkout@v4
       - name: Set up Node.js
-        if: steps.gate.outputs.proceed == 'true'
+        if: github.event_name != 'schedule' || steps.gate.outputs.proceed == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Install dependencies
-        if: steps.gate.outputs.proceed == 'true'
+        if: github.event_name != 'schedule' || steps.gate.outputs.proceed == 'true'
         run: npm install
       - name: Run Scanners
-        if: steps.gate.outputs.proceed == 'true'
+        if: github.event_name != 'schedule' || steps.gate.outputs.proceed == 'true'
         run: node index.js

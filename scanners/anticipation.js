@@ -99,10 +99,11 @@ export function runScanners(symbol, history) {
       // Bearish Trend Intensity condition (Stockbee blog: avgc7/avgc65 <= 0.95)
       if (tiRatio <= 0.95) {
         bearishTrendIntensity = symbol;
-        // Bearish Anticipation, confirmed via EasyScan screenshot:
-        // liquidity >= 300000, TI65 <= 0.95, tight range, price > 15
+        // Bearish Anticipation, per EasyScan screenshot but with liquidity
+        // scaled down from Pradeep's 300000 to 150000 for a $25k account --
+        // still 1.5x the bullish floor to account for short-cover/squeeze risk.
         if (
-          minVol3 >= 300000 &&
+          minVol3 >= 150000 &&
           latest.close > 15 &&
           netChange >= -0.40 && netChange <= 0.40 &&
           percentChange >= -1.0 && percentChange <= 1.0

@@ -2,15 +2,24 @@
 import YahooFinance from 'yahoo-finance2';
 import { runScanners } from './scanners/anticipation.js';
 const yahooFinance = new YahooFinance();
+
+// Known closed-end funds / non-operating-company tickers to exclude.
+// The ticker source doesn't tag security type, so add to this list
+// whenever a new CEF or similar shows up in scan results.
+const EXCLUDED_SYMBOLS = new Set([
+  'BCX', 'GGN', 'HQL', 'FSSL', 'IGA'
+]);
+
 async function getStockList() {
   console.log("Fetching full market symbol directory...");
   const response = await fetch('https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.txt');
   const text = await response.text();
   const symbols = text.split('\n')
     .map(s => s.trim().toUpperCase())
-    .filter(s => s && /^[A-Z]+$/.test(s));
+    .filter(s => s && /^[A-Z]+$/.test(s))
+    .filter(s => !EXCLUDED_SYMBOLS.has(s));
 
-  console.log(`Loaded ${symbols.length} symbols from full market exchange directory.`);
+  console.log(`Loaded ${symbols.length} symbols from full market exchange directory (${EXCLUDED_SYMBOLS.size} excluded).`);
   return symbols;
 }
 async function run() {

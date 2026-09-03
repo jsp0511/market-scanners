@@ -10,6 +10,20 @@ function smaCloseEndingAt(history, period, endIndex) {
   return sum / period;
 }
 
+// ADR% (Average Daily Range %) over the trailing `period` days ending at endIndex.
+// Formula per Qullamaggie: 100 * (average(High/Low) - 1)
+function averageDailyRangePercent(history, period, endIndex) {
+  const startIndex = endIndex - period + 1;
+  if (startIndex < 0) return null;
+  let sum = 0;
+  for (let i = startIndex; i <= endIndex; i++) {
+    const day = history[i];
+    if (!day.low || day.low <= 0 || !day.high) return null;
+    sum += day.high / day.low;
+  }
+  return 100 * ((sum / period) - 1);
+}
+
 export function runScanners(symbol, history) {
   if (!history || history.length < 5) return { standard: null, ipo: null, trendIntensity: null, young: null };
   const latest = history[history.length - 1];
@@ -21,6 +35,14 @@ export function runScanners(symbol, history) {
   if (minVol3 < 100000) return { standard: null, ipo: null, trendIntensity: null, young: null };
   // Price Floor: > 3
   if (latest.close <= 3) return { standard: null, ipo: null, trendIntensity: null, young: null };
+  // ADR% Floor: skip stocks whose 20-day average daily range is too slow to trade.
+  // Skipped (not enforced) if under 20 days of history -- e.g. very fresh IPOs.
+  if (history.length >= 20) {
+    const adrPercent = averageDailyRangePercent(history, 20, history.length - 1);
+    if (adrPercent !== null && adrPercent < 3) {
+      return { standard: null, ipo: null, trendIntensity: null, young: null };
+    }
+  }
   const netChange = latest.close - previous.close;
   const percentChange = ((netChange / previous.close) * 100);
   const isIPO = history.length < 252;

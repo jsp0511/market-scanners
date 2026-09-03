@@ -25,22 +25,23 @@ function averageDailyRangePercent(history, period, endIndex) {
 }
 
 export function runScanners(symbol, history) {
-  if (!history || history.length < 5) return { standard: null, ipo: null, trendIntensity: null, young: null };
+  const empty = { standard: null, ipo: null, trendIntensity: null, young: null, bearish: null, bearishTrendIntensity: null };
+  if (!history || history.length < 5) return empty;
   const latest = history[history.length - 1];
   const previous = history[history.length - 2];
 
-  // Liquidity Check: minv3.1 >= 100000
+  // Liquidity Check: minv3.1 >= 100000 (baseline for all lists)
   const last3Days = history.slice(-3);
   const minVol3 = Math.min(...last3Days.map(day => day.volume));
-  if (minVol3 < 100000) return { standard: null, ipo: null, trendIntensity: null, young: null };
+  if (minVol3 < 100000) return empty;
   // Price Floor: > 3
-  if (latest.close <= 3) return { standard: null, ipo: null, trendIntensity: null, young: null };
+  if (latest.close <= 3) return empty;
   // ADR% Floor: skip stocks whose 20-day average daily range is too slow to trade.
   // Skipped (not enforced) if under 20 days of history -- e.g. very fresh IPOs.
   if (history.length >= 20) {
     const adrPercent = averageDailyRangePercent(history, 20, history.length - 1);
     if (adrPercent !== null && adrPercent < 3) {
-      return { standard: null, ipo: null, trendIntensity: null, young: null };
+      return empty;
     }
   }
   const netChange = latest.close - previous.close;
@@ -50,10 +51,13 @@ export function runScanners(symbol, history) {
   let ipo = null;
   let trendIntensity = null;
   let young = null;
+  let bearish = null;
+  let bearishTrendIntensity = null;
   if (isIPO) {
     // Note: Pradeep's DT column (c/minl252) is only used to sort stocks into
     // the IPO watchlist before scanning -- isIPO (history.length < 252) already
     // does that job. It is not itself a scan condition, so it's not applied here.
+    // No bearish IPO scan exists in Stockbee's documented material.
     if (
       netChange >= -0.40 && netChange <= 0.40 &&
       percentChange >= -1.0 && percentChange <= 1.0
@@ -91,7 +95,22 @@ export function runScanners(symbol, history) {
           }
         }
       }
+
+      // Bearish Trend Intensity condition (Stockbee blog: avgc7/avgc65 <= 0.95)
+      if (tiRatio <= 0.95) {
+        bearishTrendIntensity = symbol;
+        // Bearish Anticipation, confirmed via EasyScan screenshot:
+        // liquidity >= 300000, TI65 <= 0.95, tight range, price > 15
+        if (
+          minVol3 >= 300000 &&
+          latest.close > 15 &&
+          netChange >= -0.40 && netChange <= 0.40 &&
+          percentChange >= -1.0 && percentChange <= 1.0
+        ) {
+          bearish = symbol;
+        }
+      }
     }
   }
-  return { standard, ipo, trendIntensity, young };
+  return { standard, ipo, trendIntensity, young, bearish, bearishTrendIntensity };
 }
